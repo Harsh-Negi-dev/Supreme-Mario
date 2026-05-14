@@ -1,7 +1,9 @@
 package com.mario.level;
 
 import com.mario.entity.Coin;
+import com.mario.entity.ConveyorBelt;
 import com.mario.entity.GoalFlag;
+import com.mario.entity.MovingPlatform;
 import com.mario.entity.Projectile;
 import com.mario.entity.enemies.Enemy;
 import com.mario.entity.powerups.PowerUp;
@@ -21,6 +23,7 @@ public class Level {
     private List<Coin> coins;
     private List<PowerUp> powerUps;
     private List<Projectile> projectiles;
+    private List<MovingPlatform> movingPlatforms;
     private GoalFlag goalFlag;
     private String levelName;
 
@@ -33,6 +36,7 @@ public class Level {
         this.coins = new ArrayList<>();
         this.powerUps = new ArrayList<>();
         this.projectiles = new ArrayList<>();
+        this.movingPlatforms = new ArrayList<>();
 
         // Initialize empty tiles
         for (int y = 0; y < height; y++) {
@@ -93,6 +97,10 @@ public class Level {
         projectiles.add(projectile);
     }
 
+    public void addMovingPlatform(MovingPlatform platform) {
+        movingPlatforms.add(platform);
+    }
+
     public void setGoalFlag(GoalFlag flag) {
         this.goalFlag = flag;
     }
@@ -120,6 +128,13 @@ public class Level {
         }
         powerUps.removeIf(p -> !p.isActive());
 
+        // Update moving platforms
+        for (MovingPlatform platform : movingPlatforms) {
+            if (platform.isActive()) {
+                platform.update(deltaTime);
+            }
+        }
+
         // Update projectiles
         for (Projectile projectile : projectiles) {
             if (projectile.isActive()) {
@@ -139,6 +154,13 @@ public class Level {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 tiles[y][x].render(g);
+            }
+        }
+
+        // Render moving platforms
+        for (MovingPlatform platform : movingPlatforms) {
+            if (platform.isActive()) {
+                platform.render(g);
             }
         }
 
@@ -207,6 +229,10 @@ public class Level {
 
     public List<Projectile> getProjectiles() {
         return projectiles;
+    }
+
+    public List<MovingPlatform> getMovingPlatforms() {
+        return movingPlatforms;
     }
 
     public GoalFlag getGoalFlag() {

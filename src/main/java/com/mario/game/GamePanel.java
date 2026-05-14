@@ -2,8 +2,10 @@ package com.mario.game;
 
 import com.mario.entity.Coin;
 import com.mario.entity.GameState;
+import com.mario.entity.MovingPlatform;
 import com.mario.entity.Player;
 import com.mario.entity.Projectile;
+import com.mario.entity.enemies.Boss;
 import com.mario.entity.enemies.Enemy;
 import com.mario.entity.powerups.PowerUp;
 import com.mario.framework.GameConstants;
@@ -129,6 +131,13 @@ public class GamePanel extends JPanel implements Runnable {
         // Update level
         currentLevel.update(deltaTime);
 
+        // Handle moving platform interactions
+        for (MovingPlatform platform : currentLevel.getMovingPlatforms()) {
+            if (platform.isActive() && platform.isPlayerOnTop(player)) {
+                platform.movePlayerWith(player, deltaTime);
+            }
+        }
+
         // Add player's projectiles to level
         for (Projectile proj : player.getProjectiles()) {
             if (proj.isActive() && !currentLevel.getProjectiles().contains(proj)) {
@@ -159,8 +168,13 @@ public class GamePanel extends JPanel implements Runnable {
             for (Enemy enemy : new java.util.ArrayList<>(currentLevel.getEnemies())) {
                 if (projectile.intersects(enemy)) {
                     projectile.setActive(false);
-                    enemy.defeat();
-                    gameState.addScore(200);
+                    if (enemy instanceof Boss) {
+                        ((Boss) enemy).takeDamage();
+                        gameState.addScore(500); // Higher score for boss hits
+                    } else {
+                        enemy.defeat();
+                        gameState.addScore(200);
+                    }
                 }
             }
         }
@@ -170,8 +184,13 @@ public class GamePanel extends JPanel implements Runnable {
             if (player.intersects(enemy)) {
                 if (player.canStompEnemy()) {
                     // Enemy stomped
-                    enemy.defeat();
-                    gameState.addScore(100);
+                    if (enemy instanceof Boss) {
+                        ((Boss) enemy).takeDamage();
+                        gameState.addScore(500); // Higher score for boss defeat
+                    } else {
+                        enemy.defeat();
+                        gameState.addScore(100);
+                    }
                     // Bounce player
                     player.setVelocityY(-300);
                 } else {

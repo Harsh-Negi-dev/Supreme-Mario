@@ -1,7 +1,10 @@
 package com.mario.level;
 
 import com.mario.entity.Coin;
+import com.mario.entity.ConveyorBelt;
 import com.mario.entity.GoalFlag;
+import com.mario.entity.MovingPlatform;
+import com.mario.entity.enemies.Boss;
 import com.mario.entity.enemies.Goomba;
 import com.mario.entity.enemies.Koopa;
 import com.mario.entity.powerups.FireFlower;
@@ -132,55 +135,62 @@ public class LevelManager {
     }
 
     private Level createLevel3() {
-        Level level = new Level(40, 20, "Level 3 - Advanced");
+        Level level = new Level(45, 20, "Level 3 - Boss Arena");
 
-        // Complex level with multiple platforms
-        for (int x = 0; x < 40; x++) {
+        // Ground and arena walls
+        for (int x = 0; x < 45; x++) {
             level.setTile(x, 19, Tile.TileType.SOLID);
         }
 
-        // Scattered platforms
-        for (int x = 1; x < 6; x++) {
-            level.setTile(x, 16, Tile.TileType.SOLID);
+        // Side walls
+        for (int y = 18; y >= 10; y--) {
+            level.setTile(0, y, Tile.TileType.SOLID);
+            level.setTile(44, y, Tile.TileType.SOLID);
         }
 
-        for (int x = 10; x < 16; x++) {
-            level.setTile(x, 13, Tile.TileType.SOLID);
+        // Platform arena
+        for (int x = 5; x < 40; x++) {
+            level.setTile(x, 15, Tile.TileType.SOLID);
         }
 
-        for (int x = 20; x < 26; x++) {
+        // Upper platforms for challenge
+        for (int x = 8; x < 15; x++) {
             level.setTile(x, 10, Tile.TileType.SOLID);
         }
 
-        for (int x = 30; x < 36; x++) {
-            level.setTile(x, 8, Tile.TileType.SOLID);
+        for (int x = 30; x < 37; x++) {
+            level.setTile(x, 10, Tile.TileType.SOLID);
         }
 
-        // Hazards
-        for (int x = 9; x <= 9; x++) {
-            level.setTile(x, 18, Tile.TileType.SPIKE);
-        }
-        for (int x = 19; x <= 19; x++) {
-            level.setTile(x, 16, Tile.TileType.SPIKE);
-        }
+        // Add moving platforms to make arena challenging
+        level.addMovingPlatform(new MovingPlatform(200, 520, 80, 15,
+                MovingPlatform.Direction.HORIZONTAL, 200, 600, 100));
+        level.addMovingPlatform(new MovingPlatform(1000, 450, 80, 15,
+                MovingPlatform.Direction.HORIZONTAL, 800, 1200, 120));
 
         // Add coins
-        for (int i = 0; i < 12; i++) {
-            level.addCoin(new Coin(80 + i * 80, 400 + (i % 3) * 80));
+        for (int i = 0; i < 10; i++) {
+            level.addCoin(new Coin(150 + i * 100, 350));
         }
 
-        // Add power-ups
-        level.addPowerUp(new SuperMushroom(350, 320));
-        level.addPowerUp(new FireFlower(700, 240));
+        // Add fire power-ups for boss fight
+        level.addPowerUp(new FireFlower(400, 380));
+        level.addPowerUp(new FireFlower(900, 300));
 
-        // Add enemies
-        level.addEnemy(new Goomba(280, 560));
-        level.addEnemy(new Koopa(520, 480));
-        level.addEnemy(new Goomba(760, 400));
-        level.addEnemy(new Koopa(1000, 320));
+        // Add hazards at bottom
+        for (int x = 10; x < 35; x++) {
+            level.setTile(x, 18, Tile.TileType.SPIKE);
+        }
 
-        // Add goal
-        level.setGoalFlag(new GoalFlag(1360, 240));
+        // Add the BOSS
+        level.addEnemy(new Boss(1100, 320));
+
+        // Add some minion enemies
+        level.addEnemy(new Goomba(300, 560));
+        level.addEnemy(new Koopa(800, 560));
+
+        // Add goal flag after boss
+        level.setGoalFlag(new GoalFlag(1700, 240));
 
         return level;
     }

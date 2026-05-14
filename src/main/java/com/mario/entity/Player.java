@@ -226,4 +226,8 @@ public class Player extends GameObject {
     public void setOnGround(boolean onGround) {
         this.onGround = onGround;
     }
+
+    public void setX(double x) {
+        this.x = x;
+    }
 }
