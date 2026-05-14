@@ -52,6 +52,10 @@ public abstract class GameObject {
         return height;
     }
 
+    public void setHeight(double height) {
+        this.height = height;
+    }
+
     public double getVelocityX() {
         return velocityX;
     }

@@ -2,7 +2,9 @@ package com.mario.level;
 
 import com.mario.entity.Coin;
 import com.mario.entity.GoalFlag;
+import com.mario.entity.Projectile;
 import com.mario.entity.enemies.Enemy;
+import com.mario.entity.powerups.PowerUp;
 import com.mario.framework.GameObject;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
@@ -17,6 +19,8 @@ public class Level {
     private int height; // in tiles
     private List<Enemy> enemies;
     private List<Coin> coins;
+    private List<PowerUp> powerUps;
+    private List<Projectile> projectiles;
     private GoalFlag goalFlag;
     private String levelName;
 
@@ -27,6 +31,8 @@ public class Level {
         this.tiles = new Tile[height][width];
         this.enemies = new ArrayList<>();
         this.coins = new ArrayList<>();
+        this.powerUps = new ArrayList<>();
+        this.projectiles = new ArrayList<>();
 
         // Initialize empty tiles
         for (int y = 0; y < height; y++) {
@@ -79,6 +85,14 @@ public class Level {
         coins.add(coin);
     }
 
+    public void addPowerUp(PowerUp powerUp) {
+        powerUps.add(powerUp);
+    }
+
+    public void addProjectile(Projectile projectile) {
+        projectiles.add(projectile);
+    }
+
     public void setGoalFlag(GoalFlag flag) {
         this.goalFlag = flag;
     }
@@ -98,6 +112,22 @@ public class Level {
         }
         coins.removeIf(c -> !c.isActive());
 
+        // Update power-ups
+        for (PowerUp powerUp : powerUps) {
+            if (powerUp.isActive()) {
+                powerUp.update(deltaTime);
+            }
+        }
+        powerUps.removeIf(p -> !p.isActive());
+
+        // Update projectiles
+        for (Projectile projectile : projectiles) {
+            if (projectile.isActive()) {
+                projectile.updateWithLevel(this);
+            }
+        }
+        projectiles.removeIf(p -> !p.isActive());
+
         // Update goal flag
         if (goalFlag != null && goalFlag.isActive()) {
             goalFlag.update(deltaTime);
@@ -112,10 +142,24 @@ public class Level {
             }
         }
 
+        // Render power-ups
+        for (PowerUp powerUp : powerUps) {
+            if (powerUp.isActive()) {
+                powerUp.render(g);
+            }
+        }
+
         // Render coins
         for (Coin coin : coins) {
             if (coin.isActive()) {
                 coin.render(g);
+            }
+        }
+
+        // Render projectiles
+        for (Projectile projectile : projectiles) {
+            if (projectile.isActive()) {
+                projectile.render(g);
             }
         }
 
@@ -157,6 +201,14 @@ public class Level {
         return coins;
     }
 
+    public List<PowerUp> getPowerUps() {
+        return powerUps;
+    }
+
+    public List<Projectile> getProjectiles() {
+        return projectiles;
+    }
+
     public GoalFlag getGoalFlag() {
         return goalFlag;
     }
@@ -167,6 +219,10 @@ public class Level {
 
     public void removeCoin(Coin coin) {
         coins.remove(coin);
+    }
+
+    public void removePowerUp(PowerUp powerUp) {
+        powerUps.remove(powerUp);
     }
 
     public void removeEnemy(Enemy enemy) {

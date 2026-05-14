@@ -3,6 +3,9 @@ package com.mario.level;
 import com.mario.entity.Coin;
 import com.mario.entity.GoalFlag;
 import com.mario.entity.enemies.Goomba;
+import com.mario.entity.enemies.Koopa;
+import com.mario.entity.powerups.FireFlower;
+import com.mario.entity.powerups.SuperMushroom;
 
 /**
  * Manages level creation and progression
@@ -64,9 +67,14 @@ public class LevelManager {
         level.addCoin(new Coin(680, 400));
         level.addCoin(new Coin(900, 320));
 
+        // Add power-ups
+        level.addPowerUp(new SuperMushroom(340, 420));
+        level.addPowerUp(new FireFlower(800, 260));
+
         // Add enemies
         level.addEnemy(new Goomba(400, 560));
         level.addEnemy(new Goomba(700, 480));
+        level.addEnemy(new Koopa(900, 560));
 
         // Add goal flag
         level.setGoalFlag(new GoalFlag(1000, 280));
@@ -109,9 +117,12 @@ public class LevelManager {
             level.addCoin(new Coin(100 + i * 80, 450));
         }
 
+        // Add power-ups
+        level.addPowerUp(new FireFlower(450, 380));
+
         // Add enemies
         level.addEnemy(new Goomba(320, 560));
-        level.addEnemy(new Goomba(560, 480));
+        level.addEnemy(new Koopa(560, 480));
         level.addEnemy(new Goomba(800, 400));
 
         // Add goal
@@ -158,11 +169,15 @@ public class LevelManager {
             level.addCoin(new Coin(80 + i * 80, 400 + (i % 3) * 80));
         }
 
+        // Add power-ups
+        level.addPowerUp(new SuperMushroom(350, 320));
+        level.addPowerUp(new FireFlower(700, 240));
+
         // Add enemies
         level.addEnemy(new Goomba(280, 560));
-        level.addEnemy(new Goomba(520, 480));
+        level.addEnemy(new Koopa(520, 480));
         level.addEnemy(new Goomba(760, 400));
-        level.addEnemy(new Goomba(1000, 320));
+        level.addEnemy(new Koopa(1000, 320));
 
         // Add goal
         level.setGoalFlag(new GoalFlag(1360, 240));

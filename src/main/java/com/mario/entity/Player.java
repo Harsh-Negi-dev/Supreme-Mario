@@ -8,6 +8,8 @@ import com.mario.level.Tile;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Player character (Mario)
@@ -17,6 +19,9 @@ public class Player extends GameObject {
     private boolean onGround;
     private Color marioColor = new Color(255, 0, 0); // Red Mario
     private boolean facingRight = true;
+    private PowerUpType powerUp = PowerUpType.NONE;
+    private List<Projectile> projectiles = new ArrayList<>();
+    private double fireDelay = 0;
 
     public Player(double x, double y, InputHandler inputHandler) {
         super(x, y, GameConstants.PLAYER_WIDTH, GameConstants.PLAYER_HEIGHT);
@@ -42,6 +47,28 @@ public class Player extends GameObject {
             velocityY = -GameConstants.PLAYER_JUMP_POWER;
             onGround = false;
         }
+
+        // Handle fire flower attack
+        if (powerUp == PowerUpType.FIRE_FLOWER && inputHandler.isKeyPressed(KeyEvent.VK_CONTROL)) {
+            fireDelay -= deltaTime;
+            if (fireDelay <= 0) {
+                projectiles.add(new Projectile(
+                    facingRight ? x + width : x - 12,
+                    y + height / 2,
+                    facingRight ? 1 : -1
+                ));
+                fireDelay = 0.2; // 0.2 seconds between shots
+            }
+        } else {
+            fireDelay = 0;
+        }
+
+        // Update projectiles
+        for (Projectile proj : projectiles) {
+            proj.update(deltaTime);
+            proj.updateWithLevel(level);
+        }
+        projectiles.removeIf(p -> !p.isActive());
 
         // Apply gravity
         velocityY += GameConstants.GRAVITY * deltaTime;
@@ -118,7 +145,15 @@ public class Player extends GameObject {
             return;
         }
 
-        // Draw simple Mario character
+        // Draw Mario with power-up color
+        if (powerUp == PowerUpType.FIRE_FLOWER) {
+            marioColor = new Color(255, 165, 0); // Orange Fire Mario
+        } else if (powerUp == PowerUpType.MUSHROOM) {
+            marioColor = new Color(0, 128, 0); // Green Super Mario
+        } else {
+            marioColor = new Color(255, 0, 0); // Red normal Mario
+        }
+
         g.setColor(marioColor);
         g.fillRect((int) x, (int) y, (int) width, (int) height);
 
@@ -126,17 +161,33 @@ public class Player extends GameObject {
         g.setColor(Color.WHITE);
         int leftEyeX = facingRight ? 8 : 18;
         int rightEyeX = facingRight ? 18 : 8;
-        g.fillRect((int) (x + leftEyeX), (int) (y + 10), 6, 6);
-        g.fillRect((int) (x + rightEyeX), (int) (y + 10), 6, 6);
+        int eyeY = powerUp == PowerUpType.MUSHROOM ? 15 : 10;
+        g.fillRect((int) (x + leftEyeX), (int) (y + eyeY), 6, 6);
+        g.fillRect((int) (x + rightEyeX), (int) (y + eyeY), 6, 6);
 
         // Draw pupils
         g.setColor(Color.BLACK);
-        g.fillRect((int) (x + leftEyeX + 1), (int) (y + 11), 4, 4);
-        g.fillRect((int) (x + rightEyeX + 1), (int) (y + 11), 4, 4);
+        g.fillRect((int) (x + leftEyeX + 1), (int) (y + eyeY + 1), 4, 4);
+        g.fillRect((int) (x + rightEyeX + 1), (int) (y + eyeY + 1), 4, 4);
 
         // Draw mustache
         g.setColor(Color.BLACK);
-        g.fillRect((int) (x + 6), (int) (y + 22), 20, 2);
+        int mustacheY = powerUp == PowerUpType.MUSHROOM ? 30 : 22;
+        g.fillRect((int) (x + 6), (int) (y + mustacheY), 20, 2);
+
+        // Draw power-up indicator
+        if (powerUp != PowerUpType.NONE) {
+            g.setColor(Color.YELLOW);
+            g.setFont(g.getFont().deriveFont(10f));
+            g.drawString(powerUp.getDisplayName(), (int) x, (int) (y - 5));
+        }
+
+        // Render projectiles
+        for (Projectile proj : projectiles) {
+            if (proj.isActive()) {
+                proj.render(g);
+            }
+        }
     }
 
     public boolean canStompEnemy() {
@@ -145,6 +196,27 @@ public class Player extends GameObject {
 
     public void collectCoin(Coin coin) {
         coin.collect();
+    }
+
+    public void setPowerUp(PowerUpType type) {
+        this.powerUp = type;
+    }
+
+    public PowerUpType getPowerUp() {
+        return powerUp;
+    }
+
+    public List<Projectile> getProjectiles() {
+        return projectiles;
+    }
+
+    @Override
+    public void setHeight(double height) {
+        this.height = height;
+        // Adjust Y position so the player doesn't fall through the ground
+        if (y + height > GameConstants.GROUND_LEVEL) {
+            y = GameConstants.GROUND_LEVEL - height;
+        }
     }
 
     public boolean isOnGround() {

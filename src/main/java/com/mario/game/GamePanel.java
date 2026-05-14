@@ -3,9 +3,12 @@ package com.mario.game;
 import com.mario.entity.Coin;
 import com.mario.entity.GameState;
 import com.mario.entity.Player;
+import com.mario.entity.Projectile;
 import com.mario.entity.enemies.Enemy;
+import com.mario.entity.powerups.PowerUp;
 import com.mario.framework.GameConstants;
 import com.mario.framework.InputHandler;
+import com.mario.graphics.Camera;
 import com.mario.level.Level;
 import com.mario.level.LevelManager;
 import java.awt.Color;
@@ -23,6 +26,7 @@ public class GamePanel extends JPanel implements Runnable {
     private InputHandler inputHandler;
     private LevelManager levelManager;
     private GameState gameState;
+    private Camera camera;
     private boolean running;
     private long lastFrameTime;
     private double gameOverTimer = 0;
@@ -42,6 +46,9 @@ public class GamePanel extends JPanel implements Runnable {
 
         // Initialize game state
         gameState = new GameState(3); // 3 lives
+
+        // Initialize camera
+        camera = new Camera(GameConstants.WINDOW_WIDTH, GameConstants.WINDOW_HEIGHT);
 
         // Initialize player
         player = new Player(100, 500, inputHandler);
@@ -122,12 +129,39 @@ public class GamePanel extends JPanel implements Runnable {
         // Update level
         currentLevel.update(deltaTime);
 
+        // Add player's projectiles to level
+        for (Projectile proj : player.getProjectiles()) {
+            if (proj.isActive() && !currentLevel.getProjectiles().contains(proj)) {
+                currentLevel.addProjectile(proj);
+            }
+        }
+
         // Handle coin collection
         for (Coin coin : new java.util.ArrayList<>(currentLevel.getCoins())) {
             if (player.intersects(coin)) {
                 player.collectCoin(coin);
                 gameState.collectCoin(coin.getPoints());
                 currentLevel.removeCoin(coin);
+            }
+        }
+
+        // Handle power-up collection
+        for (PowerUp powerUp : new java.util.ArrayList<>(currentLevel.getPowerUps())) {
+            if (player.intersects(powerUp)) {
+                powerUp.applyEffect(player);
+                powerUp.collect();
+                currentLevel.removePowerUp(powerUp);
+            }
+        }
+
+        // Handle projectile-enemy collisions
+        for (Projectile projectile : new java.util.ArrayList<>(currentLevel.getProjectiles())) {
+            for (Enemy enemy : new java.util.ArrayList<>(currentLevel.getEnemies())) {
+                if (projectile.intersects(enemy)) {
+                    projectile.setActive(false);
+                    enemy.defeat();
+                    gameState.addScore(200);
+                }
             }
         }
 
@@ -152,6 +186,10 @@ public class GamePanel extends JPanel implements Runnable {
             gameState.completeLevel();
         }
 
+        // Update camera to follow player
+        camera.follow(player.getX() + player.getWidth() / 2, player.getY(),
+                      currentLevel.getPixelWidth(), currentLevel.getPixelHeight());
+
         // Allow restart with R key
         if (inputHandler.isKeyPressed(KeyEvent.VK_R)) {
             resetLevel();
@@ -167,7 +205,13 @@ public class GamePanel extends JPanel implements Runnable {
 
         Level currentLevel = levelManager.getCurrentLevel();
 
-        // Draw level
+        // Save the original transform
+        java.awt.geom.AffineTransform originalTransform = g2d.getTransform();
+
+        // Apply camera transform
+        g2d.translate(-camera.getCameraX(), -camera.getCameraY());
+
+        // Draw level (all entities, tiles, etc.)
         currentLevel.render(g2d);
 
         // Draw player
@@ -175,7 +219,10 @@ public class GamePanel extends JPanel implements Runnable {
             player.render(g2d);
         }
 
-        // Draw HUD
+        // Restore original transform for HUD
+        g2d.setTransform(originalTransform);
+
+        // Draw HUD (always on screen, not affected by camera)
         drawHUD(g2d);
 
         // Draw level complete message
