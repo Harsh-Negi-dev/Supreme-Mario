@@ -52,6 +52,10 @@ public class GameState {
         return score;
     }
 
+    public void setScore(int score) {
+        this.score = score;
+    }
+
     public int getLives() {
         return lives;
     }

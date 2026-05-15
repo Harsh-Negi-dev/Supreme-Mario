@@ -13,6 +13,9 @@ import com.mario.framework.InputHandler;
 import com.mario.graphics.Camera;
 import com.mario.level.Level;
 import com.mario.level.LevelManager;
+import com.mario.replay.ReplayRecorder;
+import com.mario.replay.ReplayPlayer;
+import com.mario.replay.ReplayManager;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -23,7 +26,7 @@ import javax.swing.JPanel;
 /**
  * Main game rendering and update panel
  */
-public class GamePanel extends JPanel implements Runnable {
+public class GamePanel extends JPanel implements Runnable, ReplayManager {
     private Player player;
     private InputHandler inputHandler;
     private LevelManager levelManager;
@@ -33,6 +36,9 @@ public class GamePanel extends JPanel implements Runnable {
     private long lastFrameTime;
     private double gameOverTimer = 0;
     private static final double LEVEL_TRANSITION_TIME = 2.0; // seconds
+    private ReplayRecorder replayRecorder;
+    private ReplayPlayer replayPlayer;
+    private boolean isPlayingReplay = false;
 
     public GamePanel() {
         this.setFocusable(true);
@@ -51,6 +57,10 @@ public class GamePanel extends JPanel implements Runnable {
 
         // Initialize camera
         camera = new Camera(GameConstants.WINDOW_WIDTH, GameConstants.WINDOW_HEIGHT);
+
+        // Initialize replay system
+        replayRecorder = new ReplayRecorder();
+        replayPlayer = new ReplayPlayer();
 
         // Initialize player
         player = new Player(100, 500, inputHandler);
@@ -91,6 +101,11 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void update(double deltaTime) {
+        if (isPlayingReplay) {
+            updateReplayPlayback();
+            return;
+        }
+
         if (gameState.isGameOver()) {
             return; // Game over - no updates
         }
@@ -110,6 +125,11 @@ public class GamePanel extends JPanel implements Runnable {
                 } else {
                     // Game complete!
                     gameState.setGameOver(true);
+                    // Save replay after completing game
+                    if (replayRecorder.isRecording()) {
+                        replayRecorder.stopRecording();
+                        replayRecorder.saveReplay("playthrough_" + System.currentTimeMillis());
+                    }
                 }
             }
             return;
@@ -130,6 +150,11 @@ public class GamePanel extends JPanel implements Runnable {
 
         // Update level
         currentLevel.update(deltaTime);
+
+        // Record frame for replay
+        if (replayRecorder.isRecording()) {
+            replayRecorder.recordFrame(player, currentLevel, gameState);
+        }
 
         // Handle moving platform interactions
         for (MovingPlatform platform : currentLevel.getMovingPlatforms()) {
@@ -213,6 +238,21 @@ public class GamePanel extends JPanel implements Runnable {
         if (inputHandler.isKeyPressed(KeyEvent.VK_R)) {
             resetLevel();
         }
+
+        // Handle replay controls
+        if (inputHandler.isKeyPressed(KeyEvent.VK_P) && !replayRecorder.isRecording()) {
+            if (!replayRecorder.isRecording()) {
+                replayRecorder.startRecording();
+                System.out.println("Recording started!");
+            }
+        }
+
+        // Key Q to load and play last replay
+        if (inputHandler.isKeyPressed(KeyEvent.VK_Q)) {
+            if (replayPlayer.hasFrames()) {
+                startPlayback();
+            }
+        }
     }
 
     @Override
@@ -270,6 +310,22 @@ public class GamePanel extends JPanel implements Runnable {
                     10, 75);
 
         // Level
+        g.drawString("Level: " + (levelManager.getCurrentLevelIndex() + 1), 10, 100);
+
+        // Replay status
+        if (replayRecorder.isRecording()) {
+            g.setColor(new Color(255, 0, 0));
+            g.drawString("REC: " + replayRecorder.getTotalFrames() + " frames", 10, 125);
+        }
+
+        if (isPlayingReplay) {
+            g.setColor(new Color(0, 0, 255));
+            int frameIdx = replayPlayer.getCurrentFrameIndex();
+            int totalFrames = replayPlayer.getTotalFrames();
+            g.drawString("REPLAY: " + frameIdx + "/" + totalFrames, 10, 125);
+        }
+
+        // Level
         g.drawString("Level: " + (levelManager.getCurrentLevelIndex() + 1),
                     GameConstants.WINDOW_WIDTH - 150, 25);
     }
@@ -317,5 +373,88 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void stopGame() {
         running = false;
+    }
+
+    // ReplayManager implementation methods
+    @Override
+    public void startRecording() {
+        replayRecorder.startRecording();
+    }
+
+    @Override
+    public void stopRecording() {
+        replayRecorder.stopRecording();
+    }
+
+    @Override
+    public void saveRecording(String filename) {
+        replayRecorder.saveReplay(filename);
+    }
+
+    @Override
+    public void loadReplay(String filename) {
+        replayPlayer.loadReplay(filename);
+    }
+
+    @Override
+    public void startPlayback() {
+        if (replayPlayer.hasFrames()) {
+            isPlayingReplay = true;
+            replayPlayer.startPlayback();
+            System.out.println("Replay playback started!");
+        }
+    }
+
+    @Override
+    public void stopPlayback() {
+        isPlayingReplay = false;
+        replayPlayer.stopPlayback();
+    }
+
+    @Override
+    public boolean isRecording() {
+        return replayRecorder.isRecording();
+    }
+
+    @Override
+    public boolean isPlayingReplay() {
+        return isPlayingReplay;
+    }
+
+    @Override
+    public ReplayPlayer getReplayPlayer() {
+        return replayPlayer;
+    }
+
+    @Override
+    public ReplayRecorder getReplayRecorder() {
+        return replayRecorder;
+    }
+
+    private void updateReplayPlayback() {
+        if (!replayPlayer.isPlaying()) {
+            isPlayingReplay = false;
+            return;
+        }
+
+        com.mario.replay.ReplayFrame frame = replayPlayer.getCurrentFrame();
+        if (frame != null) {
+            // Update player position and state from replay frame
+            player.setX(frame.playerX);
+            player.setY(frame.playerY);
+            player.setVelocityX(frame.playerVelX);
+            player.setVelocityY(frame.playerVelY);
+            player.setOnGround(frame.playerOnGround);
+
+            // Update game state
+            gameState.setScore(frame.score);
+
+            // Update camera
+            camera.follow(player.getX() + player.getWidth() / 2, player.getY(),
+                         levelManager.getCurrentLevel().getPixelWidth(),
+                         levelManager.getCurrentLevel().getPixelHeight());
+        }
+
+        replayPlayer.advanceFrame();
     }
 }
